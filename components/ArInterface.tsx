@@ -263,6 +263,44 @@ const BackgroundLayer: React.FC<{ style: string, themeColor: string }> = ({ styl
     );
 };
 
+const AudioVisualizer: React.FC<{ level: number, theme: any }> = ({ level, theme }) => {
+    // Generate a symmetrical set of bars
+    const barCount = 32;
+    const center = barCount / 2;
+    
+    return (
+        <div className="absolute bottom-0 left-0 w-full h-[50vh] flex items-end justify-center gap-[2px] pointer-events-none z-0 pb-32">
+            {[...Array(barCount)].map((_, i) => {
+                // Calculate distance from center (0 to 1)
+                const dist = Math.abs(i - center) / center;
+                // Inverse distance (1 at center, 0 at edges)
+                const inverseDist = 1 - dist;
+                
+                // Base height based on position (bell curve)
+                const baseHeight = 10 + (inverseDist * 50);
+                
+                // Dynamic height based on audio level
+                // Center bars react more strongly
+                const dynamicHeight = Math.max(4, level * 400 * inverseDist);
+                
+                // Final height mixing base + dynamic + some random noise for "jitter"
+                const height = baseHeight + dynamicHeight;
+                
+                return (
+                    <div 
+                        key={i} 
+                        className={`w-1.5 rounded-t-sm transition-all duration-75 ease-out ${theme.bg} ${theme.border} border-t border-x opacity-60`}
+                        style={{ 
+                            height: `${height}px`,
+                            opacity: Math.max(0.2, (level * 2) * inverseDist + 0.1) 
+                        }} 
+                    />
+                );
+            })}
+        </div>
+    );
+};
+
 // --- Widgets ---
 
 const WeatherWidget: React.FC<{ data: any, theme: any }> = ({ data, theme }) => {
@@ -403,6 +441,9 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
           <BackgroundLayer style={bgStyle} themeColor={currentTheme.text} />
       </div>
 
+      {/* Audio Waveform Visualizer - Placed 'under' the background logic but visible above grid */}
+      <AudioVisualizer level={audioLevel} theme={currentTheme} />
+
       {/* Video Layer */}
       <video
         ref={videoRef}
@@ -466,7 +507,7 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
 
 
         {/* CENTER CONTENT: Transcription/Translation Windows */}
-        <div className={`w-full max-w-6xl transition-all duration-500 ease-in-out ${isFullScreen ? 'fixed inset-4 z-50 h-auto' : 'relative'}`}>
+        <div className={`transition-all duration-500 ease-in-out ${isFullScreen ? 'fixed inset-0 z-50 p-0 sm:p-4 w-full h-full' : 'relative w-full max-w-6xl'}`}>
             <div className={`w-full ${isFullScreen ? 'h-full' : 'h-[350px] lg:h-[500px]'} ${currentTheme.bg} ${currentTheme.border} ${currentTheme.shadow} border backdrop-blur-xl rounded-lg flex flex-col overflow-hidden transition-all duration-500`}>
                 
                 {/* Window Header */}
@@ -553,7 +594,7 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
             </div>
 
             {/* QUICK CONFIG BAR (Below Window) */}
-            <div className="mt-4 flex flex-wrap justify-between items-center gap-4 animate-in slide-in-from-bottom duration-700 delay-100">
+            <div className={`mt-4 flex flex-wrap justify-between items-center gap-4 animate-in slide-in-from-bottom duration-700 delay-100 ${isFullScreen ? 'hidden' : ''}`}>
                 
                 {/* Left: Mode Selection */}
                 <div className="flex gap-2">
