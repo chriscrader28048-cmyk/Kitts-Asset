@@ -119,6 +119,7 @@ export class GeminiLiveService {
   private reconnectTimeout: number | null = null;
   private currentStream: MediaStream | null = null;
   private currentSystemInstruction: string = '';
+  private currentVoiceName: string = 'Fenrir';
   
   // VAD State
   private silenceFrameCount: number = 0;
@@ -128,7 +129,6 @@ export class GeminiLiveService {
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Global Network Recovery Listener
-    // If the internet comes back and we were supposed to be connected, reconnect immediately.
     if (typeof window !== 'undefined') {
         window.addEventListener('online', () => {
             console.log('Network online detected. Checking connection status...');
@@ -157,24 +157,26 @@ export class GeminiLiveService {
   setMuted(muted: boolean) {
       this.isAudioMuted = muted;
       if (muted) {
+          // Immediately kill sound if muted
           this.activeSources.forEach(s => { try { s.stop(); } catch(e) {} });
           this.activeSources.clear();
       }
   }
 
-  async connect(stream: MediaStream, videoEl: HTMLVideoElement, systemInstruction: string, isSystemAudio: boolean = false) {
+  async connect(stream: MediaStream, videoEl: HTMLVideoElement, systemInstruction: string, isSystemAudio: boolean = false, voiceName: string = 'Fenrir') {
     this.isIntentionalDisconnect = false;
     this.currentStream = stream;
     this.videoElement = videoEl;
     this.currentSystemInstruction = systemInstruction;
     this.isSystemAudio = isSystemAudio;
+    this.currentVoiceName = voiceName;
 
     if (this.reconnectTimeout) {
         window.clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
     }
 
-    // Ensure we start with a clean slate
+    // AGGRESSIVE CLEANUP: Ensure previous session logic is dead before starting new one.
     await this.cleanupResources();
 
     this.callbacks.onStatusChange('connecting');
@@ -202,14 +204,14 @@ export class GeminiLiveService {
           ];
       }
 
-      console.log(`Connecting in ${this.mode.toUpperCase()} mode. Tools active: ${!!tools}`);
+      console.log(`Connecting in ${this.mode.toUpperCase()} mode. Voice: ${voiceName}. Tools active: ${!!tools}`);
 
       this.sessionPromise = this.ai.live.connect({
         model: MODEL_NAME,
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } },
           },
           systemInstruction: systemInstruction,
           tools: tools,
@@ -225,7 +227,6 @@ export class GeminiLiveService {
           onmessage: this.handleMessage.bind(this),
           onclose: () => {
             console.log('Gemini Live Session Closed');
-            // If it wasn't the user who clicked Stop, assume it's a drop or timeout and reconnect.
             if (!this.isIntentionalDisconnect) {
                 this.handleConnectionLoss();
             } else {
@@ -233,11 +234,8 @@ export class GeminiLiveService {
             }
           },
           onerror: (err) => {
-            // Log but don't panic. Most "errors" in live streaming are recoverable by restarting.
             console.warn('Gemini Live Stream Interruption:', err);
-            
             if (!this.isIntentionalDisconnect) {
-                // Aggressively attempt to reconnect instead of showing error state
                 this.handleConnectionLoss();
             } else {
                 this.callbacks.onStatusChange('error');
@@ -258,23 +256,16 @@ export class GeminiLiveService {
   }
 
   private handleConnectionLoss() {
-      // Prevent multiple timeouts stacking up
       if (this.reconnectTimeout) return;
-      
       console.log('Connection interrupted. Initiating auto-reconnect sequence...');
-      
-      // Update status to connecting so the UI shows the spinner, not the "Start" button
       this.callbacks.onStatusChange('connecting'); 
-      
       this.cleanupResources();
       
-      // Fast Retry (1 second) to minimize downtime
       this.reconnectTimeout = window.setTimeout(() => {
           this.reconnectTimeout = null;
-          // Double check intent before firing
           if (!this.isIntentionalDisconnect && this.currentStream && this.videoElement) {
               console.log('Reconnecting now...');
-              this.connect(this.currentStream, this.videoElement, this.currentSystemInstruction, this.isSystemAudio);
+              this.connect(this.currentStream, this.videoElement, this.currentSystemInstruction, this.isSystemAudio, this.currentVoiceName);
           }
       }, 1000);
   }
@@ -283,14 +274,13 @@ export class GeminiLiveService {
     if (!this.inputAudioContext) return;
     try {
       this.inputSource = this.inputAudioContext.createMediaStreamSource(stream);
-      
-      // LATENCY OPTIMIZATION: Reduced buffer size to 1024 (approx 64ms at 16kHz)
+      // LATENCY OPTIMIZATION: Reduced buffer size to 1024
       this.processor = this.inputAudioContext.createScriptProcessor(1024, 1, 1);
       
       this.processor.onaudioprocess = (e) => {
         if (!this.isConnected) return;
 
-        // Turn-Taking Logic
+        // Turn-Taking Logic: If Assistant is speaking, don't listen (unless in System Audio/Translate mode)
         if (!this.isSystemAudio && this.mode === 'assistant' && this.activeSources.size > 0) {
             return;
         }
@@ -320,9 +310,7 @@ export class GeminiLiveService {
              }
         }
 
-        if (!shouldSend) {
-            return; 
-        }
+        if (!shouldSend) return; 
 
         const blob = createPcmBlob(inputData);
         this.sessionPromise?.then((session) => {
@@ -332,9 +320,7 @@ export class GeminiLiveService {
              if (res && typeof res.catch === 'function') {
                 res.catch(() => {});
              }
-           } catch (err) {
-             // Ignore synchronous errors during transmission
-           }
+           } catch (err) {}
         }).catch(() => {});
       };
       
@@ -372,9 +358,7 @@ export class GeminiLiveService {
             }).catch(() => {});
           }
         }, 'image/jpeg', JPEG_QUALITY);
-      } catch (e) {
-        // Silently ignore video frame errors
-      }
+      } catch (e) {}
     }, 1000 / FRAME_RATE);
   }
 
@@ -389,35 +373,37 @@ export class GeminiLiveService {
     }
 
     if (message.toolCall) {
-      for (const fc of message.toolCall.functionCalls) {
-        let success = false;
-        if (fc.name === 'render_weather_widget') {
-             this.callbacks.onWidgetUpdate({ type: 'weather', data: fc.args as any });
-             success = true;
-        } else if (fc.name === 'render_map_location') {
-             this.callbacks.onWidgetUpdate({ type: 'map', data: fc.args as any });
-             success = true;
-        } else if (fc.name === 'render_stock_card') {
-             this.callbacks.onWidgetUpdate({ type: 'stock', data: fc.args as any });
-             success = true;
-        } else if (fc.name === 'render_info_card') {
-             this.callbacks.onWidgetUpdate({ type: 'info', data: fc.args as any });
-             success = true;
-        }
+        // ... (Tool handling logic remains same) ...
+        for (const fc of message.toolCall.functionCalls) {
+            let success = false;
+            let data: any = fc.args;
+            if (fc.name === 'render_weather_widget') {
+                this.callbacks.onWidgetUpdate({ type: 'weather', data });
+                success = true;
+            } else if (fc.name === 'render_map_location') {
+                this.callbacks.onWidgetUpdate({ type: 'map', data });
+                success = true;
+            } else if (fc.name === 'render_stock_card') {
+                this.callbacks.onWidgetUpdate({ type: 'stock', data });
+                success = true;
+            } else if (fc.name === 'render_info_card') {
+                this.callbacks.onWidgetUpdate({ type: 'info', data });
+                success = true;
+            }
 
-        if (success) {
-            this.sessionPromise?.then(session => {
-                if (!this.isConnected) return;
-                session.sendToolResponse({
-                    functionResponses: [{
-                        id: fc.id,
-                        name: fc.name,
-                        response: { result: 'Widget Rendered' }
-                    }]
-                });
-            }).catch(() => {});
+            if (success) {
+                this.sessionPromise?.then(session => {
+                    if (!this.isConnected) return;
+                    session.sendToolResponse({
+                        functionResponses: [{
+                            id: fc.id,
+                            name: fc.name,
+                            response: { result: 'Widget Rendered' }
+                        }]
+                    });
+                }).catch(() => {});
+            }
         }
-      }
     }
     
     if (message.serverContent?.interrupted) {
@@ -428,13 +414,9 @@ export class GeminiLiveService {
 
     const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
     
-    if (this.isAudioMuted) {
-        return;
-    }
+    if (this.isAudioMuted) return;
 
-    // WAKE WORD LOGIC:
-    // If audio output is NOT active (i.e. sleeping in Standard Mode), we simply ignore the audio buffer.
-    // The transcription callbacks above still run, allowing the App to detect keywords in the text.
+    // Wake Word Logic check
     if (!this.isAudioOutputActive && this.mode === 'assistant') {
         return; 
     }
@@ -448,8 +430,7 @@ export class GeminiLiveService {
         source.buffer = audioBuffer;
         source.connect(this.outputNode);
         
-        // Only block input in ASSISTANT mode. 
-        // In Translator mode, we want Full Duplex (speak and listen at same time)
+        // Full Duplex for Translator (speak over), Half Duplex for Assistant
         if (this.mode === 'assistant') {
             this.activeSources.add(source);
             source.addEventListener('ended', () => { 
@@ -465,7 +446,7 @@ export class GeminiLiveService {
     }
   }
 
-  // ... (rest of class remains same) ...
+  // ... (rest of class) ...
 
   private startAudioLevelLoop() {
     const updateLevel = () => {
@@ -485,7 +466,6 @@ export class GeminiLiveService {
   async disconnect() {
     console.log("Terminating session by user command.");
     this.isIntentionalDisconnect = true;
-    
     if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -496,7 +476,7 @@ export class GeminiLiveService {
 
   private async cleanupResources() {
     this.isConnected = false;
-    this.sessionPromise = null; // Important: Clear the promise reference
+    this.sessionPromise = null; 
     
     try {
       this.inputSource?.disconnect();
@@ -517,6 +497,7 @@ export class GeminiLiveService {
       clearInterval(this.frameInterval);
       this.frameInterval = null;
     }
+    // STOP ALL AUDIO IMMEDIATELY
     this.activeSources.forEach(s => { try { s.stop(); } catch (e) {} });
     this.activeSources.clear();
     this.nextStartTime = 0;
