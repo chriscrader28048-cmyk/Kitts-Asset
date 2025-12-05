@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Mic, MicOff, Video, VideoOff, Activity, Globe, MessageSquare, Settings, Languages, BrainCircuit, X, Monitor, Box, Check, Cpu, Zap, ChevronRight, ArrowRightLeft, Cloud, CloudLightning, CloudRain, Sun, CloudSnow, CloudFog, MapPin, TrendingUp, TrendingDown, Info, ScanLine, Target, Presentation, Type, Bold, Moon, Sun as SunIcon, Minimize2, Maximize2, Volume2, VolumeX, MonitorPlay, ArrowRight, Network, Download, Trash2, Smile } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Activity, Globe, MessageSquare, Settings, Languages, BrainCircuit, X, Monitor, Box, Check, Cpu, Zap, ChevronRight, ArrowRightLeft, Cloud, CloudLightning, CloudRain, Sun, CloudSnow, CloudFog, MapPin, TrendingUp, TrendingDown, Info, ScanLine, Target, Presentation, Type, Bold, Moon, Sun as SunIcon, Minimize2, Maximize2, Volume2, VolumeX, MonitorPlay, ArrowRight, Network, Download, Trash2, Smile, Power, Lock } from 'lucide-react';
 import { WidgetData } from '../services/geminiLive';
 import { TranslationItem } from '../App';
 
@@ -30,6 +30,9 @@ interface ArInterfaceProps {
   // Assistant Config
   isFunMode: boolean;
   setIsFunMode: (val: boolean) => void;
+  isFreeMode: boolean;
+  setIsFreeMode: (val: boolean) => void;
+  isAwake: boolean; // For visual feedback
   // Visual Config
   theme: 'cyber' | 'matrix' | 'warning' | 'neon';
   setTheme: (t: 'cyber' | 'matrix' | 'warning' | 'neon') => void;
@@ -412,6 +415,9 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
   onApplyConfig,
   isFunMode,
   setIsFunMode,
+  isFreeMode,
+  setIsFreeMode,
+  isAwake,
   theme,
   setTheme,
   bgStyle,
@@ -472,7 +478,6 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
       )}
 
       {/* MAIN CONTAINER */}
-      {/* Changed justify-end to justify-center to push content UP and fill the empty space */}
       <div className="relative z-10 w-full h-full flex flex-col justify-center items-center p-4 lg:p-10">
         
         {/* HEADER: Always at top */}
@@ -492,6 +497,15 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
                     <div className={`mt-2 flex items-center gap-2 px-3 py-1 rounded border border-blue-500/30 bg-blue-900/20 backdrop-blur-md animate-in slide-in-from-left`}>
                         <CloudLightning className="w-3 h-3 text-blue-400" />
                         <span className="text-[10px] text-blue-300 font-bold tracking-wider">GEMINI CLOUD</span>
+                    </div>
+                )}
+                
+                {mode === 'assistant' && !isFreeMode && (
+                     <div className={`mt-2 flex items-center gap-2 px-3 py-1 rounded border backdrop-blur-md animate-in slide-in-from-left transition-colors duration-500 ${isAwake ? 'border-green-500/30 bg-green-900/20' : 'border-slate-500/30 bg-slate-900/20'}`}>
+                        {isAwake ? <Zap className="w-3 h-3 text-green-400 animate-pulse" /> : <Moon className="w-3 h-3 text-slate-400" />}
+                        <span className={`text-[10px] font-bold tracking-wider ${isAwake ? 'text-green-300' : 'text-slate-400'}`}>
+                            {isAwake ? 'AWAKE' : 'SLEEPING (ZZZ)'}
+                        </span>
                     </div>
                 )}
             </div>
@@ -654,26 +668,35 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
                              </button>
                          </div>
                      )}
-                     {mode === 'assistant' && (
-                         // Removed center fun mode button
-                         null
-                     )}
                 </div>
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-3">
                      {mode === 'assistant' && (
-                        <button 
-                            onClick={() => { setIsFunMode(!isFunMode); onApplyConfig(); }}
-                            className={`p-3 rounded-full border transition-all ${
-                                isFunMode 
-                                ? 'bg-pink-500/20 border-pink-500 text-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)]' 
-                                : 'border-white/10 bg-black/40 hover:bg-white/10'
-                            }`}
-                            title="Toggle Fun Mode"
-                        >
-                            <Smile className="w-5 h-5" />
-                        </button>
+                        <>
+                            <button 
+                                onClick={() => { setIsFunMode(!isFunMode); onApplyConfig(); }}
+                                className={`p-3 rounded-full border transition-all ${
+                                    isFunMode 
+                                    ? 'bg-pink-500/20 border-pink-500 text-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)]' 
+                                    : 'border-white/10 bg-black/40 hover:bg-white/10'
+                                }`}
+                                title="Toggle Fun Mode"
+                            >
+                                <Smile className="w-5 h-5" />
+                            </button>
+                            <button 
+                                onClick={() => { setIsFreeMode(!isFreeMode); }}
+                                className={`p-3 rounded-full border transition-all ${
+                                    isFreeMode 
+                                    ? 'bg-green-500/20 border-green-500 text-green-500 shadow-[0_0_10px_rgba(74,222,128,0.3)]' 
+                                    : 'border-white/10 bg-black/40 hover:bg-white/10'
+                                }`}
+                                title={isFreeMode ? "Free Mode (Always Listen)" : "Standard Mode (Wake Word: Hey Kitts)"}
+                            >
+                                {isFreeMode ? <Zap className="w-5 h-5" /> : <Power className="w-5 h-5" />}
+                            </button>
+                        </>
                      )}
 
                      <button 
@@ -830,6 +853,18 @@ const ArInterface: React.FC<ArInterfaceProps> = ({
                                             <Smile className="w-4 h-4 text-pink-400" />
                                         </div>
                                         <div className="text-xs opacity-50">Enable witty, sarcastic, and humorous responses</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded bg-white/5 border border-white/10">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center cursor-pointer ${isFreeMode ? 'bg-green-500 border-green-500' : 'border-white/30'}`} onClick={() => setIsFreeMode(!isFreeMode)}>
+                                        {isFreeMode && <Check className="w-3 h-3 text-black" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm flex items-center gap-2">
+                                            FREE MODE (ALWAYS LISTEN)
+                                            <Zap className="w-4 h-4 text-green-400" />
+                                        </div>
+                                        <div className="text-xs opacity-50">If disabled, Assistant sleeps until you say "Hey Kitts" or "Hey Mỡ"</div>
                                     </div>
                                 </div>
                             </div>

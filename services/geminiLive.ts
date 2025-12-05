@@ -112,6 +112,7 @@ export class GeminiLiveService {
   private mode: 'assistant' | 'translator' = 'assistant';
   private isAudioMuted: boolean = false;
   private isSystemAudio: boolean = false; // Flag for system audio source
+  private isAudioOutputActive: boolean = true; // Gate for Wake Word Logic
 
   // Reconnection Logic State
   private isIntentionalDisconnect: boolean = false;
@@ -145,6 +146,12 @@ export class GeminiLiveService {
 
   setMode(mode: 'assistant' | 'translator') {
       this.mode = mode;
+  }
+
+  // Used for Wake Word / Sleep Mode. 
+  // If false, we process transcription (to hear the wake word) but suppress audio playback.
+  setAudioOutputActive(active: boolean) {
+      this.isAudioOutputActive = active;
   }
 
   setMuted(muted: boolean) {
@@ -423,6 +430,13 @@ export class GeminiLiveService {
     
     if (this.isAudioMuted) {
         return;
+    }
+
+    // WAKE WORD LOGIC:
+    // If audio output is NOT active (i.e. sleeping in Standard Mode), we simply ignore the audio buffer.
+    // The transcription callbacks above still run, allowing the App to detect keywords in the text.
+    if (!this.isAudioOutputActive && this.mode === 'assistant') {
+        return; 
     }
 
     if (base64Audio && this.outputAudioContext && this.outputNode) {

@@ -41,7 +41,9 @@ const App: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isSystemAudioMode, setIsSystemAudioMode] = useState(false);
   const [isFunMode, setIsFunMode] = useState(false);
-  
+  const [isFreeMode, setIsFreeMode] = useState(true); // True = Always listen, False = Wake Word
+  const [isAwake, setIsAwake] = useState(true); // Internal state for wake word mode
+
   // Visual State
   const [theme, setTheme] = useState<'cyber' | 'matrix' | 'warning' | 'neon'>('cyber');
   const [bgStyle, setBgStyle] = useState<'grid' | 'horizon' | 'orbital' | 'hex'>('horizon');
@@ -50,6 +52,37 @@ const App: React.FC = () => {
   const serviceRef = useRef<GeminiLiveService | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const genAI = useRef(new GoogleGenAI({ apiKey: process.env.API_KEY }));
+  const lastInteractionRef = useRef<number>(Date.now());
+
+  // Wake Word & Sleep Timer Logic
+  useEffect(() => {
+      // If we are in Free Mode, we are always awake.
+      if (isFreeMode) {
+          setIsAwake(true);
+          return;
+      }
+
+      // If we are in Standard Mode (Wake Word) and currently awake, check timer.
+      const timer = setInterval(() => {
+          if (isAwake && Date.now() - lastInteractionRef.current > 30000) {
+              console.log("Idle timeout reached. Going to sleep.");
+              setIsAwake(false);
+          }
+      }, 1000);
+
+      return () => clearInterval(timer);
+  }, [isFreeMode, isAwake]);
+
+  // Sync Awake state with Service to gate audio output
+  useEffect(() => {
+      if (serviceRef.current) {
+          // If Free Mode -> Output Active.
+          // If Standard Mode -> Output Active only if Awake.
+          const shouldOutputAudio = isFreeMode || isAwake;
+          serviceRef.current.setAudioOutputActive(shouldOutputAudio);
+      }
+  }, [isFreeMode, isAwake]);
+
 
   // Initialize service on mount
   useEffect(() => {
@@ -63,21 +96,31 @@ const App: React.FC = () => {
         }
       },
       onTranscription: (type, text, isFinal) => {
-        
+        lastInteractionRef.current = Date.now(); // Update activity on any transcription
+
+        // --- WAKE WORD DETECTION ---
+        if (mode === 'assistant' && !isFreeMode && !isAwake && type === 'user') {
+            const lowerText = text.toLowerCase();
+            const keywords = ['hey kitts', 'hey kids', 'hey mỡ', 'mỡ ơi', 'hello kitts', 'hi kitts'];
+            
+            if (keywords.some(k => lowerText.includes(k))) {
+                console.log("Wake word detected!");
+                setIsAwake(true);
+                // We add a system message to indicate wake up
+                setTranscription(prev => [...prev, { type: 'model', text: '👀 I am listening...' }]);
+            }
+        }
+
         // --- TRANSLATOR MODE LOGIC (THE POOL) ---
-        // We use a ref-like pattern via state updater to handle the "Pool" logic
         if (mode === 'translator') {
             setTranslationPool(prev => {
                 const pool = [...prev];
                 const terminators = ['.', '?', '!', '。', '？', '！'];
                 
                 if (type === 'user') {
-                    // 1. Find the current active source block
-                    // It's the last one if it is NOT source-complete.
                     let currentIdx = pool.findIndex(item => !item.isSourceComplete);
                     
                     if (currentIdx === -1) {
-                        // Create new block
                         const newItem: TranslationItem = {
                             id: Date.now(),
                             sourceText: text,
@@ -87,41 +130,28 @@ const App: React.FC = () => {
                             isCloudTranslated: false,
                             timestamp: Date.now()
                         };
-                        
-                        // Check if this new text itself is already a complete sentence
                         const lastChar = text.trim().slice(-1);
                         if (terminators.includes(lastChar)) {
                             newItem.isSourceComplete = true;
                         }
                         return [...pool, newItem];
                     } else {
-                        // Append to existing block
                         const item = { ...pool[currentIdx] };
                         item.sourceText += text;
-                        
-                        // Check for terminator to close this source block
                         const lastChar = item.sourceText.trim().slice(-1);
                         if (terminators.includes(lastChar)) {
                             item.isSourceComplete = true;
                         }
-                        
                         pool[currentIdx] = item;
                         return pool;
                     }
                 } 
                 else if (type === 'model') {
-                    // Update model target text
                     let targetIdx = pool.findIndex(item => !item.isTargetComplete);
-                    
                     if (targetIdx === -1) {
-                         if (pool.length > 0) {
-                             targetIdx = pool.length - 1;
-                         } else {
-                             return pool; 
-                         }
+                         if (pool.length > 0) targetIdx = pool.length - 1;
+                         else return pool; 
                     }
-
-                    // Only update if we haven't already replaced it with a high-quality Cloud translation
                     if (!pool[targetIdx].isCloudTranslated) {
                         const item = { ...pool[targetIdx] };
                         item.targetText += text;
@@ -131,8 +161,6 @@ const App: React.FC = () => {
                 }
                 return pool;
             });
-            
-            // Also update standard transcription for Whiteboard compatibility
             setTranscription(prev => [...prev, { type, text }]);
             return;
         }
@@ -162,16 +190,14 @@ const App: React.FC = () => {
     return () => {
       serviceRef.current?.disconnect();
     };
-  }, [mode]); 
+  }, [mode, isFreeMode, isAwake]); // Add isFreeMode, isAwake to dependency array
 
   // --- HYBRID CLOUD TRANSLATION EFFECT ---
-  // Watch the pool. If a source sentence is complete but not cloud-translated, send it to Gemini Flash.
   useEffect(() => {
     if (mode !== 'translator' || !isCloudTranslationEnabled) return;
 
     const processTranslation = async (item: TranslationItem) => {
         try {
-            // Optimistic update to prevent double sending
             setTranslationPool(prev => prev.map(p => 
                 p.id === item.id ? { ...p, isCloudTranslated: true } : p
             ));
@@ -303,8 +329,6 @@ const App: React.FC = () => {
       const source = sourceLang === 'Auto' ? 'any language' : sourceLang;
       
       if (mode === 'translator') {
-          // LOW LATENCY STREAMING PROMPT
-          // We instruct the model to "stream" tokens immediately without thinking about full structure
           return `ROLE: REAL-TIME SIMULTANEOUS INTERPRETER.
 MODE: LOW_LATENCY_STREAMING.
 
@@ -317,41 +341,45 @@ TASK:
 6. OUTPUT ONLY TRANSLATED TEXT.
 `;
       } else {
+          // Assistant Mode
+          let basePersona = `You are Kitts, an advanced AR HUD assistant. 
+          Your interface is a futuristic heads-up display. 
+          You have access to REAL-TIME tools via Google Search.
+          
+          VISUAL CAPABILITIES:
+          1. LOCATIONS: Use 'render_map_location'.
+          2. WEATHER: Use 'render_weather_widget'.
+          3. STOCKS: Use 'render_stock_card'.
+          4. FACTS: Use 'render_info_card'.`;
+
           if (isFunMode) {
-            return `You are Kitts, a CHAOTIC GOOD, HILARIOUS and WITTY AR assistant.
+            basePersona = `You are Kitts, a CHAOTIC GOOD, HILARIOUS and WITTY AR assistant.
             Your interface is a futuristic heads-up display.
             
             PERSONALITY:
             - Be sarcastic, funny, and entertaining.
             - Make jokes about the user's questions.
-            - Use emojis.
             - Still provide helpful information but with a comedic twist.
-            
-            STRICT MODE: ASSISTANT ONLY.
-            NOISE FILTERING: Ignore isolated words.
             
             VISUAL CAPABILITIES (Still use these tools):
             1. LOCATIONS: Use 'render_map_location'.
             2. WEATHER: Use 'render_weather_widget'.
             3. STOCKS: Use 'render_stock_card'.
-            4. FACTS: Use 'render_info_card'.
-            `;
+            4. FACTS: Use 'render_info_card'.`;
           }
-          return `You are Kitts, an advanced AR HUD assistant. 
-          Your interface is a futuristic heads-up display. 
-          You have access to REAL-TIME tools via Google Search.
-          
-          STRICT MODE: ASSISTANT ONLY.
-          NOISE FILTERING: Ignore isolated words, grunts, or background noise.
-          
-          VISUAL CAPABILITIES:
-          1. LOCATIONS: Use 'render_map_location' for "Where is..." queries.
-          2. WEATHER: Use 'render_weather_widget' for weather queries.
-          3. STOCKS: Use 'render_stock_card' for market queries.
-          4. FACTS: Use 'render_info_card' for definitions/facts.
-          
-          Speak concisely and professionally.
-          `;
+
+          // Add Wake Word Instruction context for the model
+          if (!isFreeMode) {
+              return `${basePersona}
+              
+              WAKE WORD PROTOCOL:
+              - You have a name: "Kitts" or "Mỡ".
+              - If the user says "Hey Kitts", "Hey Mỡ", or "Mỡ ơi", acknowledge it enthusiastically.
+              - Once engaged, continue the conversation normally.
+              `;
+          }
+
+          return basePersona;
       }
   };
 
@@ -376,11 +404,11 @@ TASK:
      if (status === 'connected') {
          restartSession();
      }
-  }, [mode, isProfessionalMode, isFunMode, sourceLang, targetLang]);
+  }, [mode, isProfessionalMode, isFunMode, isFreeMode, sourceLang, targetLang]);
 
   const handleApplyConfig = useCallback(() => {
      restartSession();
-  }, [status, mode, sourceLang, targetLang, isProfessionalMode, isFunMode]);
+  }, [status, mode, sourceLang, targetLang, isProfessionalMode, isFunMode, isFreeMode]);
 
   const handleConnect = useCallback(async () => {
     try {
@@ -402,7 +430,7 @@ TASK:
       console.error("Microphone access denied or failed", e);
       alert("Microphone access is required to initiate Kitts.");
     }
-  }, [isCameraOn, mode, sourceLang, targetLang, isProfessionalMode, isFunMode, isMuted]);
+  }, [isCameraOn, mode, sourceLang, targetLang, isProfessionalMode, isFunMode, isFreeMode, isMuted]);
 
   const handleConnectSystemAudio = useCallback(async () => {
     try {
@@ -446,7 +474,7 @@ TASK:
              alert("Could not access system audio.");
         }
     }
-  }, [isCameraOn, mode, sourceLang, targetLang, isProfessionalMode, isFunMode, isMuted]);
+  }, [isCameraOn, mode, sourceLang, targetLang, isProfessionalMode, isFunMode, isFreeMode, isMuted]);
 
   const handleDisconnect = useCallback(() => {
     serviceRef.current?.disconnect();
@@ -475,6 +503,8 @@ TASK:
       isCloudTranslationEnabled={isCloudTranslationEnabled} setIsCloudTranslationEnabled={setIsCloudTranslationEnabled}
       onApplyConfig={handleApplyConfig}
       isFunMode={isFunMode} setIsFunMode={setIsFunMode}
+      isFreeMode={isFreeMode} setIsFreeMode={setIsFreeMode}
+      isAwake={isAwake}
       theme={theme} setTheme={setTheme}
       bgStyle={bgStyle} setBgStyle={setBgStyle}
       activeWidget={activeWidget}
