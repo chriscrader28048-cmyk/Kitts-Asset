@@ -1,0 +1,9 @@
+{
+  "name": "Kitts AR",
+  "description": "A futuristic AR voice assistant and meeting translator powered by Gemini Live API.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ]
+}
