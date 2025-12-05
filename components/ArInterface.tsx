@@ -301,481 +301,553 @@ const MapWidget: React.FC<{ data: any, theme: any }> = ({ data, theme }) => {
                      <MapPin className={`w-4 h-4 ${theme.text} animate-bounce`} />
                      <span className="font-bold text-white text-sm">TARGET ACQUIRED</span>
                  </div>
-                 <h3 className={`text-lg font-mono uppercase ${theme.text}`}>{data.name}</h3>
-                 <div className="text-xs font-mono text-white/70 mb-2">LAT: {data.lat} <br/> LON: {data.lon}</div>
-                 <div className="text-[10px] uppercase text-white/50 border-t border-white/10 pt-1">{data.description}</div>
+                 <h3 className={`text-lg font-mono leading-tight ${theme.text}`}>{data.name}</h3>
+                 <div className="flex justify-between text-[10px] opacity-70 font-mono mt-1">
+                     <span>LAT: {data.lat}</span>
+                     <span>LON: {data.lon}</span>
+                 </div>
+                 <p className="text-[10px] mt-2 border-t border-white/10 pt-1 leading-normal">{data.description}</p>
             </div>
         </div>
     );
 };
 
 const StockWidget: React.FC<{ data: any, theme: any }> = ({ data, theme }) => {
-    const isUp = data.trend === 'up';
     return (
-        <div className={`absolute top-24 left-4 z-30 w-56 ${theme.bg} ${theme.border} border backdrop-blur-md rounded-xl p-4 shadow-2xl animate-in slide-in-from-left duration-700`}>
-             <div className="flex justify-between items-start mb-2">
-                 <span className={`text-xs font-mono uppercase opacity-70 ${theme.text}`}>MARKET DATA</span>
-                 {isUp ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
-             </div>
-             <div className="text-2xl font-bold text-white tracking-widest">{data.symbol}</div>
-             <div className="flex items-end gap-2">
-                 <span className="text-xl font-mono">{data.price}</span>
-                 <span className={`text-sm font-mono ${isUp ? 'text-green-400' : 'text-red-400'}`}>{data.change}</span>
-             </div>
-             {/* Fake Graph */}
-             <div className="flex items-end gap-1 h-8 mt-2 opacity-50">
-                 {Array.from({length: 10}).map((_,i) => (
-                     <div key={i} className={`w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}`} style={{height: `${Math.random()*100}%`}}></div>
-                 ))}
-             </div>
+        <div className={`absolute bottom-32 left-8 z-30 w-56 ${theme.bg} ${theme.border} border backdrop-blur-md rounded-lg p-3 animate-in slide-in-from-left duration-500`}>
+            <div className="flex justify-between items-start">
+                <div>
+                    <span className="text-xs font-bold text-white/50 block">MARKET DATA</span>
+                    <h2 className="text-2xl font-bold tracking-wider">{data.symbol}</h2>
+                </div>
+                {data.trend === 'up' ? 
+                    <TrendingUp className="w-6 h-6 text-green-400" /> : 
+                    data.trend === 'down' ? 
+                    <TrendingDown className="w-6 h-6 text-red-400" /> : 
+                    <Activity className="w-6 h-6 text-gray-400" />
+                }
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-xl font-mono">{data.price}</span>
+                <span className={`text-sm ${data.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+                    {data.change}
+                </span>
+            </div>
         </div>
     );
 };
 
 const InfoWidget: React.FC<{ data: any, theme: any }> = ({ data, theme }) => {
     return (
-        <div className={`absolute bottom-32 right-4 z-30 w-72 ${theme.bg} ${theme.border} border backdrop-blur-md rounded-tl-xl rounded-br-xl p-5 shadow-2xl animate-in fade-in slide-in-from-bottom duration-500`}>
-             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
-                 <ScanLine className={`w-4 h-4 ${theme.text} animate-pulse`} />
-                 <span className={`text-xs font-bold tracking-widest ${theme.text}`}>{data.category}</span>
-             </div>
-             <h3 className="text-lg font-bold text-white mb-1 leading-none">{data.title}</h3>
-             <p className="text-sm text-slate-300 leading-snug">{data.fact}</p>
-             <div className={`absolute -left-1 top-4 w-1 h-8 ${theme.text.replace('text','bg')}`}></div>
+        <div className={`absolute top-24 left-8 z-30 w-64 ${theme.bg} ${theme.border} border-l-4 backdrop-blur-md p-4 animate-in fade-in duration-700`}>
+            <div className="flex items-center gap-2 mb-2">
+                <Info className={`w-4 h-4 ${theme.text}`} />
+                <span className="text-xs font-bold tracking-widest">{data.category}</span>
+            </div>
+            <h3 className={`text-xl font-bold mb-2 leading-tight ${theme.text}`}>{data.title}</h3>
+            <p className="text-sm leading-relaxed opacity-90">{data.fact}</p>
         </div>
     );
 };
 
-const ArInterface: React.FC<ArInterfaceProps> = ({ 
-  status, 
-  onConnect, 
+const ArInterface: React.FC<ArInterfaceProps> = ({
+  status,
+  onConnect,
   onConnectSystem,
-  onDisconnect, 
-  videoRef, 
+  onDisconnect,
+  videoRef,
   transcription,
   translationPool,
   audioLevel,
   isCameraOn,
   onToggleCamera,
-  mode, setMode,
-  sourceLang, setSourceLang,
-  targetLang, setTargetLang,
-  isProfessionalMode, setIsProfessionalMode,
-  isCloudTranslationEnabled, setIsCloudTranslationEnabled,
+  mode,
+  setMode,
+  sourceLang,
+  setSourceLang,
+  targetLang,
+  setTargetLang,
+  isProfessionalMode,
+  setIsProfessionalMode,
+  isCloudTranslationEnabled,
+  setIsCloudTranslationEnabled,
   onApplyConfig,
-  isFunMode, setIsFunMode,
-  theme, setTheme,
-  bgStyle, setBgStyle,
+  isFunMode,
+  setIsFunMode,
+  theme,
+  setTheme,
+  bgStyle,
+  setBgStyle,
   activeWidget,
   isMuted,
   onToggleMute,
   onClear,
   onDownload
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'system' | 'visuals'>('system');
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const t = THEMES[theme];
-  
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [transcription, translationPool]);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const currentTheme = THEMES[theme];
 
-  // HUD Data Simulation
-  const [hudData, setHudData] = useState({ lat: '34.0522', lon: '-118.2437', alt: '120ft' });
-  useEffect(() => {
-    const interval = setInterval(() => {
-        setHudData({
-            lat: (34.0522 + (Math.random() - 0.5) * 0.001).toFixed(4),
-            lon: (-118.2437 + (Math.random() - 0.5) * 0.001).toFixed(4),
-            alt: (120 + Math.random() * 5).toFixed(0) + 'ft'
-        });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleApply = () => {
-      onApplyConfig();
-      setShowSettings(false);
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcription, translationPool, status]);
 
   return (
-    <div className={`relative w-full h-screen bg-black overflow-hidden flex flex-col font-rajdhani ${t.text}`}>
+    <div className={`relative w-full h-screen overflow-hidden ${currentTheme.text} font-sans selection:bg-cyan-500/30`}>
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 bg-black z-[-1]">
+          <BackgroundLayer style={bgStyle} themeColor={currentTheme.text} />
+      </div>
+
+      {/* Video Layer */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-1000 ${isCameraOn ? 'opacity-60' : 'opacity-0'}`}
+      />
       
-      {/* --- Whiteboard Portal --- */}
+      {/* Scanline Overlay */}
+      <div className="scan-line text-white/10" />
+
+      {/* Widgets Layer */}
+      {activeWidget && activeWidget.type === 'weather' && <WeatherWidget data={activeWidget.data} theme={currentTheme} />}
+      {activeWidget && activeWidget.type === 'map' && <MapWidget data={activeWidget.data} theme={currentTheme} />}
+      {activeWidget && activeWidget.type === 'stock' && <StockWidget data={activeWidget.data} theme={currentTheme} />}
+      {activeWidget && activeWidget.type === 'info' && <InfoWidget data={activeWidget.data} theme={currentTheme} />}
+
+      {/* Whiteboard Portal */}
       {isWhiteboardOpen && (
           <WhiteboardWindow 
-              transcription={transcription} 
-              targetLang={targetLang}
-              onClose={() => setIsWhiteboardOpen(false)}
+            transcription={transcription} 
+            targetLang={targetLang}
+            onClose={() => setIsWhiteboardOpen(false)} 
           />
       )}
 
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        muted 
-        className={`absolute top-0 left-0 w-full h-full object-cover z-0 transition-opacity duration-500 ${isCameraOn ? 'opacity-50' : 'opacity-0'}`}
-      />
-      
-      <BackgroundLayer style={bgStyle} themeColor={t.text} />
-      
-      {/* --- WIDGET LAYER --- */}
-      {activeWidget?.type === 'weather' && <WeatherWidget data={activeWidget.data} theme={t} />}
-      {activeWidget?.type === 'map' && <MapWidget data={activeWidget.data} theme={t} />}
-      {activeWidget?.type === 'stock' && <StockWidget data={activeWidget.data} theme={t} />}
-      {activeWidget?.type === 'info' && <InfoWidget data={activeWidget.data} theme={t} />}
-      
-      <div className={`scan-line z-10 ${t.text}`}></div>
-
-      <div className={`relative z-20 w-full h-full mx-auto flex flex-col justify-between p-4 max-w-6xl`}>
+      {/* MAIN CONTAINER */}
+      {/* Changed justify-end to justify-center to push content UP and fill the empty space */}
+      <div className="relative z-10 w-full h-full flex flex-col justify-center items-center p-4 lg:p-10">
         
-        {/* HEADER AREA */}
-        <div className="flex justify-between items-start pt-6 shrink-0">
-            <div className={`hud-border bg-slate-900/80 backdrop-blur-sm p-4 rounded-br-3xl min-w-[150px] ${t.border}`}>
-                <h1 className={`text-3xl font-bold tracking-widest ${t.text} leading-none`}>KITTS<span className="text-white text-xs align-top ml-1 opacity-50">AR V3.0</span></h1>
-                <div className={`flex items-center gap-2 mt-2 font-mono text-xs opacity-80`}>
-                    <Activity className="w-4 h-4 animate-pulse" />
-                    <span>SYS: {status.toUpperCase()}</span>
+        {/* HEADER: Always at top */}
+        <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none">
+            <div className="pointer-events-auto">
+                <div className={`flex items-center gap-3 ${currentTheme.border} border px-4 py-2 bg-black/40 backdrop-blur-md rounded-lg`}>
+                    <BrainCircuit className={`w-6 h-6 ${currentTheme.text} animate-pulse`} />
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-widest leading-none">KITTS<span className="text-xs align-top opacity-50 ml-1">AR V3.0</span></h1>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Activity className="w-3 h-3" />
+                            <span className="text-[10px] tracking-widest uppercase">SYS: {status.toUpperCase()}</span>
+                        </div>
+                    </div>
                 </div>
-                 <div className={`flex items-center gap-2 mt-1 font-mono text-xs opacity-80 text-white`}>
-                    <Cpu className="w-4 h-4 text-blue-400" />
-                    <span>GEMINI CLOUD</span>
-                </div>
+                {isCloudTranslationEnabled && mode === 'translator' && (
+                    <div className={`mt-2 flex items-center gap-2 px-3 py-1 rounded border border-blue-500/30 bg-blue-900/20 backdrop-blur-md animate-in slide-in-from-left`}>
+                        <CloudLightning className="w-3 h-3 text-blue-400" />
+                        <span className="text-[10px] text-blue-300 font-bold tracking-wider">GEMINI CLOUD</span>
+                    </div>
+                )}
             </div>
 
-            <div className={`hud-border bg-slate-900/80 backdrop-blur-sm p-4 px-4 rounded-bl-3xl flex flex-col items-end ${t.border}`}>
-                 <div className={`text-right font-mono text-xs mb-2 ${t.text}`}>
-                    <div>ALT: {hudData.alt}</div>
-                    <div className={!isCameraOn ? 'text-red-400' : ''}>CAM: {isCameraOn ? 'ON' : 'OFF'}</div>
-                    <div className={mode === 'translator' ? 'text-white font-bold' : ''}>
-                        MODE: {mode.toUpperCase()}
-                    </div>
-                 </div>
-                 {mode === 'translator' && (
-                     <div className={`flex items-center gap-2 font-mono text-white ${t.bg} px-2 py-1 rounded border ${t.border} text-xs`}>
-                         <span className={t.text}>{sourceLang}</span>
-                         <ArrowRightLeft className="w-4 h-4" />
-                         <span className="text-white font-bold">{targetLang}</span>
-                         {isProfessionalMode && <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
-                     </div>
-                 )}
-                 {mode === 'assistant' && isFunMode && (
-                     <div className={`flex items-center gap-2 font-mono text-white bg-pink-500/20 px-2 py-1 rounded border border-pink-500 text-xs`}>
-                         <Smile className="w-4 h-4 text-pink-400" />
-                         <span className="text-pink-300 font-bold">FUN MODE</span>
-                     </div>
-                 )}
+            <div className="text-right pointer-events-auto">
+                <div className="flex flex-col items-end text-[10px] font-mono opacity-70 leading-relaxed">
+                    <span>LAT: 123ft</span>
+                    <span>CAM: {isCameraOn ? 'ON' : 'OFF'}</span>
+                    <span>MODE: {mode.toUpperCase()}</span>
+                </div>
             </div>
         </div>
 
-        {/* Center Reticle - Only show on desktop if enough space */}
-        {activeWidget?.type !== 'map' && (
-            <div className={`hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-500 ${isCameraOn ? 'opacity-40' : 'opacity-10'}`}>
-                <div className={`w-[300px] h-[300px] border border-current rounded-full flex items-center justify-center animate-[spin_10s_linear_infinite] opacity-30`}>
-                    <div className="w-[280px] h-[280px] border-t border-b border-current rounded-full"></div>
-                </div>
-                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 ${t.text.replace('text', 'bg')} rounded-full ${t.shadow}`}></div>
-            </div>
-        )}
 
-        {/* MAIN CONTENT AREA */}
-        <div className={`flex-1 flex flex-col justify-end lg:justify-center gap-6 w-full transition-all lg:pb-12`}>
-            
-            {/* Audio Visualizer */}
-            <div className="flex items-center justify-center gap-1 h-8 shrink-0">
-                {Array.from({ length: 20 }).map((_, i) => {
-                    const distFromCenter = Math.abs(i - 10);
-                    const isActive = status === 'connected' && !isMuted;
-                    const height = isActive 
-                        ? Math.max(4, (audioLevel * 100) * (1 - distFromCenter/15) + Math.random() * 10)
-                        : 4;
+        {/* CENTER CONTENT: Transcription/Translation Windows */}
+        <div className={`w-full max-w-6xl transition-all duration-500 ease-in-out ${isFullScreen ? 'fixed inset-4 z-50 h-auto' : 'relative'}`}>
+            <div className={`w-full ${isFullScreen ? 'h-full' : 'h-[350px] lg:h-[500px]'} ${currentTheme.bg} ${currentTheme.border} ${currentTheme.shadow} border backdrop-blur-xl rounded-lg flex flex-col overflow-hidden transition-all duration-500`}>
+                
+                {/* Window Header */}
+                <div className={`flex items-center justify-between px-4 py-2 border-b ${currentTheme.border} bg-black/20`}>
+                    <div className="flex items-center gap-2">
+                        {mode === 'translator' ? <Languages className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                        <span className="text-xs font-bold tracking-wider uppercase">
+                            {mode === 'translator' ? 'Translation Stream' : 'System Logs'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button onClick={onDownload} className="p-1.5 hover:bg-white/10 rounded transition-colors" title="Download Log">
+                            <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={onClear} className="p-1.5 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors" title="Clear History">
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => setIsFullScreen(!isFullScreen)} className="p-1.5 hover:bg-white/10 rounded transition-colors">
+                            {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content Body */}
+                <div className="flex-1 overflow-y-auto p-4 scroll-smooth font-mono text-sm space-y-4 custom-scrollbar">
                     
-                    return (
-                        <div key={i} className={`w-2 rounded-full transition-all duration-75 ${t.text.replace('text', 'bg')}/80`} style={{ height: `${height}px` }} />
-                    );
-                })}
-            </div>
-
-            {/* TRANSCRIPTION WINDOW */}
-            <div className={`${isFullScreen ? 'fixed inset-4 md:inset-6 z-[100] bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl' : `relative bg-slate-900/60 backdrop-blur-md rounded-lg mb-2 h-[250px] lg:h-[450px]`} hud-border overflow-hidden flex flex-col transition-all duration-500 ${t.border}`}>
-                 {/* Action Bar */}
-                <div className="absolute top-2 right-2 z-20 flex gap-2">
-                    <button 
-                        onClick={() => setIsFullScreen(!isFullScreen)}
-                        className={`p-2 rounded hover:bg-white/10 transition-colors ${t.text} opacity-50 hover:opacity-100`}
-                        title={isFullScreen ? "Minimize" : "Maximize"}
-                    >
-                        {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-                    </button>
-                    <button 
-                        onClick={onDownload}
-                        className={`p-2 rounded hover:bg-white/10 transition-colors ${t.text} opacity-50 hover:opacity-100`}
-                        title="Download Transcript"
-                    >
-                        <Download className="w-5 h-5" />
-                    </button>
-                    <button 
-                        onClick={onClear}
-                        className={`p-2 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors ${t.text} opacity-50 hover:opacity-100`}
-                        title="Clear Transcript"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div 
-                    ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
-                >
-                    {transcription.length === 0 && translationPool.length === 0 && (
-                        <div className="text-center font-mono mt-16 opacity-50 h-full flex flex-col items-center justify-center">
-                            <MessageSquare className="w-8 h-8 mx-auto mb-2" />
-                            <div>
-                                {status === 'disconnected' ? 'System ready. Select a mode to begin.' : 
-                                status === 'connecting' ? 'Establishing secure link...' : 'Listening...'}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- TRANSLATOR MODE DISPLAY (POOL) --- */}
+                    {/* TRANSLATOR MODE UI */}
                     {mode === 'translator' ? (
-                        <div className="space-y-4 text-base">
+                        <div className="space-y-4">
                             {translationPool.map((item) => (
-                                <div key={item.id} className="grid grid-cols-[1fr,auto,1fr] gap-4 items-center group">
+                                <div key={item.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-white/5 pb-4 last:border-0">
                                     {/* Source */}
-                                    <div className={`text-right ${item.isSourceComplete ? 'opacity-50 text-slate-300' : 'text-white'}`}>
-                                        <p className="whitespace-pre-wrap leading-relaxed">{item.sourceText}</p>
-                                    </div>
-                                    
-                                    {/* Arrow */}
-                                    <div className="flex justify-center flex-col items-center gap-1">
-                                        <ArrowRight className={`w-5 h-5 ${item.isTargetComplete ? t.text : 'text-slate-600'}`} />
-                                        {item.isCloudTranslated && (
-                                            <Cloud className="w-3 h-3 text-sky-400" title="High-Quality Cloud Translation Active" />
-                                        )}
+                                    <div className="relative group">
+                                        <div className="absolute -left-3 top-1 w-1 h-full border-l-2 border-white/10 group-hover:border-white/30 transition-colors" />
+                                        <span className="text-[10px] uppercase opacity-40 mb-1 block">{sourceLang === 'Auto' ? 'DETECTED' : sourceLang}</span>
+                                        <p className="opacity-80 leading-relaxed whitespace-pre-wrap">{item.sourceText}</p>
                                     </div>
                                     
                                     {/* Target */}
-                                    <div className={`text-left`}>
-                                        {item.targetText ? (
-                                            <p className={`${t.text} font-medium leading-relaxed whitespace-pre-wrap`}>{item.targetText}</p>
-                                        ) : (
-                                            <div className="flex items-center gap-1 opacity-50">
-                                                <span className="w-1 h-1 rounded-full bg-current animate-bounce"></span>
-                                                <span className="w-1 h-1 rounded-full bg-current animate-bounce delay-100"></span>
-                                                <span className="w-1 h-1 rounded-full bg-current animate-bounce delay-200"></span>
-                                            </div>
-                                        )}
+                                    <div className="relative group">
+                                         <div className={`absolute -left-3 top-1 w-1 h-full border-l-2 ${item.isCloudTranslated ? 'border-blue-500' : currentTheme.border.replace('border-', 'border-')} transition-colors`} />
+                                         <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-[10px] uppercase font-bold ${currentTheme.text}`}>{targetLang}</span>
+                                            {item.isCloudTranslated && <Check className="w-3 h-3 text-blue-400" />}
+                                         </div>
+                                         <p className={`text-lg font-medium leading-relaxed whitespace-pre-wrap ${item.isTargetComplete ? 'text-white' : 'text-white/70'} ${!item.isTargetComplete && 'animate-pulse'}`}>
+                                            {item.targetText}
+                                            {!item.isTargetComplete && <span className="inline-block w-2 h-4 bg-current ml-1 animate-blink"/>}
+                                         </p>
                                     </div>
                                 </div>
                             ))}
+                            {translationPool.length === 0 && (
+                                <div className="h-full flex flex-col items-center justify-center opacity-30 mt-20">
+                                    <ArrowRightLeft className="w-12 h-12 mb-2" />
+                                    <p>Ready to translate...</p>
+                                </div>
+                            )}
                         </div>
                     ) : (
-                        /* --- ASSISTANT MODE DISPLAY (LINEAR) --- */
-                        transcription.map((msg, idx) => {
-                            const isLast = idx === transcription.length - 1;
-                            return (
-                                <div key={idx} className={`mb-4 ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
-                                    <div className={`inline-block px-4 py-2 rounded-lg tracking-wide whitespace-pre-wrap ${
+                    /* ASSISTANT MODE UI */
+                        <div className="space-y-3">
+                            {transcription.map((msg, idx) => (
+                                <div key={idx} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-3 rounded-lg backdrop-blur-sm ${
                                         msg.type === 'user' 
-                                            ? `${t.bg} ${t.text} border ${t.border} rounded-br-none` 
-                                            : 'bg-slate-800/60 text-white border border-slate-600/50 rounded-bl-none'
+                                            ? 'bg-white/10 border border-white/10 text-right' 
+                                            : `${currentTheme.bg} ${currentTheme.border} border`
                                     }`}>
-                                    {msg.type === 'model' && (
-                                        <div className={`text-[10px] ${t.text} font-mono mb-1 uppercase tracking-wider flex items-center gap-1`}>
-                                            <BrainCircuit className="w-3 h-3" />
-                                            KITTS AI
-                                        </div>
-                                    )}
-                                    <span className={`text-base ${isProfessionalMode && msg.type === 'model' ? 'font-medium leading-relaxed' : ''}`}>
-                                        {msg.text}
-                                    </span>
-                                    {isLast && status === 'connected' && (
-                                        <span className={`inline-block w-2 h-4 ml-1 align-middle ${t.bg} animate-pulse`}></span>
-                                    )}
+                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                                     </div>
                                 </div>
-                            );
-                        })
+                            ))}
+                             {transcription.length === 0 && (
+                                <div className="h-full flex flex-col items-center justify-center opacity-30 mt-20">
+                                    <MessageSquare className="w-12 h-12 mb-2" />
+                                    <p>System ready. Select a mode to begin.</p>
+                                </div>
+                            )}
+                        </div>
                     )}
+                    <div ref={messagesEndRef} />
                 </div>
             </div>
 
-            {/* CONTROLS AREA */}
-            <div className="flex items-center justify-between gap-4 w-full">
+            {/* QUICK CONFIG BAR (Below Window) */}
+            <div className="mt-4 flex flex-wrap justify-between items-center gap-4 animate-in slide-in-from-bottom duration-700 delay-100">
                 
-                {/* Mode Selectors */}
-                <div className="grid grid-cols-2 gap-4 w-auto">
+                {/* Left: Mode Selection */}
+                <div className="flex gap-2">
                     <button 
-                        onClick={() => setMode('assistant')}
-                        className={`relative p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all group overflow-hidden ${
+                        onClick={() => { setMode('assistant'); onApplyConfig(); }}
+                        className={`px-6 py-3 rounded-lg border flex items-center gap-2 transition-all duration-300 ${
                             mode === 'assistant' 
-                            ? `${t.bg} ${t.border} text-white shadow-lg` 
-                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:bg-slate-700'
+                            ? `${currentTheme.bg} ${currentTheme.border} ${currentTheme.text} shadow-[0_0_15px_rgba(6,182,212,0.2)]` 
+                            : 'border-white/10 bg-black/40 hover:bg-white/5 opacity-60'
                         }`}
                     >
-                        <BrainCircuit className={`w-5 h-5 ${mode === 'assistant' ? t.text : ''}`} />
-                        <span className="font-bold tracking-wider text-xs">ASSISTANT</span>
-                        {mode === 'assistant' && <div className={`absolute bottom-0 left-0 w-full h-1 ${t.text.replace('text', 'bg')}`}></div>}
+                        <BrainCircuit className="w-5 h-5" />
+                        <span className="font-bold tracking-wider">ASSISTANT</span>
                     </button>
-
                     <button 
-                        onClick={() => setMode('translator')}
-                        className={`relative p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all group overflow-hidden ${
+                        onClick={() => { setMode('translator'); onApplyConfig(); }}
+                        className={`px-6 py-3 rounded-lg border flex items-center gap-2 transition-all duration-300 ${
                             mode === 'translator' 
-                            ? `${t.bg} ${t.border} text-white shadow-lg` 
-                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:bg-slate-700'
+                            ? `${currentTheme.bg} ${currentTheme.border} ${currentTheme.text} shadow-[0_0_15px_rgba(6,182,212,0.2)]` 
+                            : 'border-white/10 bg-black/40 hover:bg-white/5 opacity-60'
                         }`}
                     >
-                        <Languages className={`w-5 h-5 ${mode === 'translator' ? t.text : ''}`} />
-                        <span className="font-bold tracking-wider text-xs">TRANSLATOR</span>
-                        {mode === 'translator' && <div className={`absolute bottom-0 left-0 w-full h-1 ${t.text.replace('text', 'bg')}`}></div>}
+                        <Languages className="w-5 h-5" />
+                        <span className="font-bold tracking-wider">TRANSLATOR</span>
                     </button>
                 </div>
 
-                {/* Translator Quick Config */}
-                {mode === 'translator' && (
-                    <div className="hidden lg:flex bg-slate-900/80 backdrop-blur border border-slate-700 p-3 rounded-lg flex-wrap items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2 flex-1 max-w-xl">
-                        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                            <select value={sourceLang} onChange={(e) => setSourceLang(e.target.value)} className="bg-black/50 border border-slate-600 text-white text-xs p-1 rounded outline-none focus:border-cyan-500 w-full">
-                                <option value="Auto">Auto Detect</option>
-                                {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                            </select>
-                            <ChevronRight className="w-4 h-4 text-slate-500" />
-                            <select value={targetLang} onChange={(e) => setTargetLang(e.target.value)} className="bg-black/50 border border-slate-600 text-white text-xs p-1 rounded outline-none focus:border-cyan-500 w-full">
-                                {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                )}
+                {/* Middle: Contextual Config */}
+                <div className={`flex-1 flex justify-center transition-all duration-500 ${mode === 'translator' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 hidden lg:flex'}`}>
+                     {mode === 'translator' && (
+                         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                             <select 
+                                value={sourceLang}
+                                onChange={(e) => { setSourceLang(e.target.value); onApplyConfig(); }}
+                                className="bg-transparent border-none text-center font-bold focus:ring-0 cursor-pointer hover:text-cyan-400"
+                             >
+                                 <option value="Auto">Auto Detect</option>
+                                 {LANGUAGES.map(l => <option key={l.code} value={l.name} className="bg-black">{l.name}</option>)}
+                             </select>
+                             <ArrowRight className="w-4 h-4 opacity-50" />
+                             <select 
+                                value={targetLang}
+                                onChange={(e) => { setTargetLang(e.target.value); onApplyConfig(); }}
+                                className={`bg-transparent border-none text-center font-bold focus:ring-0 cursor-pointer ${currentTheme.text}`}
+                             >
+                                 {LANGUAGES.map(l => <option key={l.code} value={l.name} className="bg-black">{l.name}</option>)}
+                             </select>
+                             
+                             <div className="w-px h-4 bg-white/20 mx-2" />
+                             
+                             <button 
+                                onClick={() => setIsWhiteboardOpen(true)}
+                                className="p-1.5 hover:bg-white/10 rounded text-cyan-400" 
+                                title="Open Whiteboard"
+                             >
+                                <Presentation className="w-4 h-4" />
+                             </button>
+                         </div>
+                     )}
+                     {mode === 'assistant' && (
+                         // Removed center fun mode button
+                         null
+                     )}
+                </div>
 
-                {/* Main Connection Controls */}
-                <div className="flex justify-center gap-6 items-center relative">
-                    <button onClick={() => setShowSettings(true)} className={`absolute -left-16 w-12 h-12 rounded-full border flex items-center justify-center transition-all ${`bg-slate-800/80 border-slate-600 ${t.text} hover:bg-slate-700`}`}>
-                        <Settings className="w-5 h-5" />
-                    </button>
-
-                    <button onClick={onToggleCamera} className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all ${isCameraOn ? `${t.bg} ${t.border} ${t.text} ${t.shadow}` : 'bg-slate-800/80 border-slate-600 text-slate-500 hover:text-slate-300'}`}>
-                        {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-                    </button>
-
-                    <button 
-                        onClick={onToggleMute} 
-                        className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all ${isMuted ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-slate-800/80 border-slate-600 text-slate-500 hover:text-slate-300'}`}
-                        title={isMuted ? "Unmute Audio" : "Mute Audio (Text Only)"}
-                    >
-                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                    </button>
-
-                    {status === 'connected' ? (
-                        <button onClick={onDisconnect} className="group flex flex-col items-center gap-2">
-                            <div className={`w-16 h-16 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center group-hover:bg-red-500/40 transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)]`}>
-                                <MicOff className="w-6 h-6 text-red-400" />
-                            </div>
-                            <span className="text-xs font-mono text-red-400 tracking-wider">TERMINATE</span>
+                {/* Right: Actions */}
+                <div className="flex items-center gap-3">
+                     {mode === 'assistant' && (
+                        <button 
+                            onClick={() => { setIsFunMode(!isFunMode); onApplyConfig(); }}
+                            className={`p-3 rounded-full border transition-all ${
+                                isFunMode 
+                                ? 'bg-pink-500/20 border-pink-500 text-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)]' 
+                                : 'border-white/10 bg-black/40 hover:bg-white/10'
+                            }`}
+                            title="Toggle Fun Mode"
+                        >
+                            <Smile className="w-5 h-5" />
                         </button>
-                    ) : (
-                        <div className="flex gap-4">
-                            <button onClick={onConnectSystem} disabled={status === 'connecting'} className="group flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <div className="relative w-16 h-16">
-                                    {status === 'connecting' && (
-                                        <div className={`absolute inset-0 border-4 border-t-current border-r-transparent border-b-current border-l-transparent rounded-full animate-spin ${t.text}`}></div>
-                                    )}
-                                    <div className={`absolute inset-0 rounded-full bg-slate-800/80 border border-slate-600 flex items-center justify-center group-hover:opacity-80 transition-all hover:bg-slate-700`}>
-                                        <MonitorPlay className="w-6 h-6 text-slate-300" />
-                                    </div>
-                                </div>
-                                <span className={`text-xs font-mono text-slate-400 tracking-wider`}>{status === 'connecting' ? 'CONNECTING' : 'SYS AUDIO'}</span>
-                            </button>
-                            
-                            <button onClick={onConnect} disabled={status === 'connecting'} className="group flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <div className="relative w-16 h-16">
-                                    {status === 'connecting' && (
-                                        <div className={`absolute inset-0 border-4 border-t-current border-r-transparent border-b-current border-l-transparent rounded-full animate-spin ${t.text}`}></div>
-                                    )}
-                                    <div className={`absolute inset-0 rounded-full ${t.bg} border ${t.border} flex items-center justify-center group-hover:opacity-80 transition-all ${t.shadow}`}>
-                                        <Mic className={`w-6 h-6 ${t.text}`} />
-                                    </div>
-                                </div>
-                                <span className={`text-xs font-mono ${t.text} tracking-wider`}>{status === 'connecting' ? 'CONNECTING' : 'MIC START'}</span>
-                            </button>
-                        </div>
-                    )}
+                     )}
+
+                     <button 
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="p-3 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 transition-colors"
+                     >
+                        <Settings className="w-5 h-5" />
+                     </button>
+                     <button 
+                        onClick={onToggleCamera}
+                        className={`p-3 rounded-full border transition-all ${
+                            isCameraOn 
+                            ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' 
+                            : 'border-white/10 bg-black/40 hover:bg-white/10'
+                        }`}
+                     >
+                        {isCameraOn ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                     </button>
+                     <button 
+                        onClick={onToggleMute}
+                        className={`p-3 rounded-full border transition-all ${
+                            isMuted 
+                            ? 'bg-red-500/20 border-red-500 text-red-500' 
+                            : 'border-white/10 bg-black/40 hover:bg-white/10'
+                        }`}
+                        title={isMuted ? "Unmute Audio" : "Mute Audio"}
+                     >
+                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                     </button>
+                     <button 
+                        onClick={onConnectSystem}
+                        className="p-3 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 transition-colors flex flex-col items-center"
+                        title="Share System Audio"
+                     >
+                        <MonitorPlay className="w-5 h-5" />
+                        <span className="text-[8px] mt-0.5 opacity-60">SYS AUDIO</span>
+                     </button>
+
+                     {/* Main Connect Button */}
+                     {status === 'disconnected' || status === 'error' ? (
+                        <button 
+                            onClick={onConnect}
+                            className={`h-12 w-12 rounded-full ${currentTheme.bg} ${currentTheme.border} border-2 flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_20px_rgba(6,182,212,0.4)]`}
+                        >
+                            <Mic className={`w-6 h-6 ${currentTheme.text}`} />
+                            <span className="text-[8px] absolute -bottom-5 font-bold tracking-wider opacity-80">MIC START</span>
+                        </button>
+                     ) : (
+                         <button 
+                            onClick={onDisconnect}
+                            className="h-12 w-12 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse"
+                         >
+                            <div className="w-4 h-4 bg-red-500 rounded-sm" />
+                            <span className="text-[8px] absolute -bottom-5 font-bold tracking-wider text-red-500 opacity-80">TERMINATE</span>
+                        </button>
+                     )}
                 </div>
             </div>
         </div>
+      </div>
 
-        {/* SETTINGS MODAL */}
-        {showSettings && (
-            <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-                <div className={`w-full max-w-md bg-slate-900 border ${t.border} rounded-xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh]`}>
-                    <button onClick={() => setShowSettings(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
-                    <h2 className={`text-xl font-bold font-mono mb-6 ${t.text} flex items-center gap-2`}><Settings className="w-5 h-5" /> CONFIGURATION</h2>
-                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        {/* Mobile Translator Settings */}
-                        {mode === 'translator' && (
-                            <div>
-                                <label className={`text-xs font-mono ${t.text} block mb-2`}>LANGUAGES</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <select value={sourceLang} onChange={(e) => setSourceLang(e.target.value)} className="bg-black/50 border border-slate-600 text-white text-sm rounded px-3 py-2 outline-none focus:border-cyan-500 w-full">
-                                        <option value="Auto">Auto Detect</option>
-                                        {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                                    </select>
-                                    <select value={targetLang} onChange={(e) => setTargetLang(e.target.value)} className="bg-black/50 border border-slate-600 text-white text-sm rounded px-3 py-2 outline-none focus:border-cyan-500 w-full">
-                                        {LANGUAGES.map(l => <option key={l.code} value={l.name}>{l.name}</option>)}
-                                    </select>
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className={`w-full max-w-2xl bg-black ${currentTheme.border} border rounded-2xl overflow-hidden shadow-2xl`}>
+                <div className="flex border-b border-white/10">
+                    <button 
+                        onClick={() => setActiveTab('system')}
+                        className={`flex-1 py-4 text-center font-bold tracking-widest hover:bg-white/5 transition-colors ${activeTab === 'system' ? `${currentTheme.text} border-b-2 ${currentTheme.border.replace('border', 'border')}` : 'opacity-50'}`}
+                    >
+                        SYSTEM CONFIG
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('visuals')}
+                        className={`flex-1 py-4 text-center font-bold tracking-widest hover:bg-white/5 transition-colors ${activeTab === 'visuals' ? `${currentTheme.text} border-b-2 ${currentTheme.border.replace('border', 'border')}` : 'opacity-50'}`}
+                    >
+                        INTERFACE VISUALS
+                    </button>
+                    <button onClick={() => setIsSettingsOpen(false)} className="px-6 hover:bg-red-500/20 hover:text-red-500 transition-colors">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="p-8 h-[400px] overflow-y-auto custom-scrollbar">
+                    {activeTab === 'system' ? (
+                        <div className="space-y-8">
+                            {/* Translator Settings */}
+                            <div className="space-y-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold opacity-80">
+                                    <Languages className="w-5 h-5 text-cyan-400" />
+                                    TRANSLATOR PROTOCOLS
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs uppercase opacity-50">Source Language</label>
+                                        <select 
+                                            value={sourceLang}
+                                            onChange={(e) => setSourceLang(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded p-3 focus:border-cyan-500 outline-none"
+                                        >
+                                            <option value="Auto">Auto Detect</option>
+                                            {LANGUAGES.map(l => <option key={l.code} value={l.name} className="bg-black">{l.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs uppercase opacity-50">Target Language</label>
+                                        <select 
+                                            value={targetLang}
+                                            onChange={(e) => setTargetLang(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded p-3 focus:border-cyan-500 outline-none"
+                                        >
+                                            {LANGUAGES.map(l => <option key={l.code} value={l.name} className="bg-black">{l.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded bg-white/5 border border-white/10">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center cursor-pointer ${isProfessionalMode ? 'bg-cyan-500 border-cyan-500' : 'border-white/30'}`} onClick={() => setIsProfessionalMode(!isProfessionalMode)}>
+                                        {isProfessionalMode && <Check className="w-3 h-3 text-black" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm">Professional Meeting Mode</div>
+                                        <div className="text-xs opacity-50">Optimize for formal vocabulary and continuous streaming</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded bg-white/5 border border-white/10">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center cursor-pointer ${isCloudTranslationEnabled ? 'bg-blue-500 border-blue-500' : 'border-white/30'}`} onClick={() => setIsCloudTranslationEnabled(!isCloudTranslationEnabled)}>
+                                        {isCloudTranslationEnabled && <Check className="w-3 h-3 text-black" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm flex items-center gap-2">
+                                            Google Cloud Gemini 2.5 Flash
+                                            <CloudLightning className="w-3 h-3 text-blue-400" />
+                                        </div>
+                                        <div className="text-xs opacity-50">Use Flash 2.5 API for high-precision text refinement (Hybrid Mode)</div>
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                            
+                            <hr className="border-white/10" />
 
-                        <div>
-                             <label className={`text-xs font-mono ${t.text} block mb-2`}>TRANSLATION ENGINE</label>
-                             <button 
-                                onClick={() => setIsCloudTranslationEnabled(!isCloudTranslationEnabled)}
-                                className={`w-full py-3 px-4 rounded-lg border flex items-center justify-between transition-all ${isCloudTranslationEnabled ? `${t.bg} ${t.border} text-white` : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
-                             >
-                                 <span className="flex items-center gap-2">
-                                     <Cloud className="w-4 h-4" />
-                                     CLOUD TEXT TRANSLATION
-                                 </span>
-                                 <span className="text-xs font-mono">{isCloudTranslationEnabled ? 'ACTIVE' : 'OFF'}</span>
-                             </button>
-                             <p className="text-xs text-slate-500 mt-2">
-                                 Uses Flash API for higher accuracy on completed sentences.
-                             </p>
-                        </div>
-                        <div>
-                            <label className={`text-xs font-mono ${t.text} block mb-2`}>INTERFACE THEME</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map((key) => (
-                                    <button key={key} onClick={() => setTheme(key)} className={`py-3 rounded-lg border transition-all capitalize ${theme === key ? `${THEMES[key].bg} ${THEMES[key].border} text-white` : 'border-slate-700 text-slate-400'}`}>{THEMES[key].name}</button>
-                                ))}
+                            {/* Assistant Settings */}
+                            <div className="space-y-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold opacity-80">
+                                    <BrainCircuit className="w-5 h-5 text-pink-400" />
+                                    ASSISTANT PERSONA
+                                </h3>
+                                <div className="flex items-center gap-3 p-3 rounded bg-white/5 border border-white/10">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center cursor-pointer ${isFunMode ? 'bg-pink-500 border-pink-500' : 'border-white/30'}`} onClick={() => setIsFunMode(!isFunMode)}>
+                                        {isFunMode && <Check className="w-3 h-3 text-black" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm flex items-center gap-2">
+                                            FUN MODE
+                                            <Smile className="w-4 h-4 text-pink-400" />
+                                        </div>
+                                        <div className="text-xs opacity-50">Enable witty, sarcastic, and humorous responses</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label className={`text-xs font-mono ${t.text} block mb-2`}>BACKGROUND STYLE</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {['grid', 'horizon', 'orbital', 'hex'].map((style) => (
-                                    <button key={style} onClick={() => setBgStyle(style as any)} className={`flex items-center justify-center gap-2 py-3 rounded-lg border transition-all capitalize ${bgStyle === style ? `${t.bg} ${t.border} text-white` : 'border-slate-700 text-slate-400'}`}>
-                                        {style === 'horizon' ? <Monitor className="w-4 h-4"/> : style === 'orbital' ? <Globe className="w-4 h-4"/> : <Box className="w-4 h-4"/>}
-                                        {style}
-                                    </button>
-                                ))}
-                            </div>
+                    ) : (
+                        <div className="space-y-8">
+                             {/* Themes */}
+                             <div className="space-y-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold opacity-80">
+                                    <Zap className="w-5 h-5 text-yellow-400" />
+                                    COLOR THEME
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map((t) => (
+                                        <button 
+                                            key={t}
+                                            onClick={() => setTheme(t)}
+                                            className={`p-4 rounded border flex flex-col items-center gap-2 transition-all ${theme === t ? `${THEMES[t].border} ${THEMES[t].bg}` : 'border-white/10 hover:bg-white/5'}`}
+                                        >
+                                            <div className={`w-8 h-8 rounded-full ${THEMES[t].bg} border ${THEMES[t].border}`} />
+                                            <span className="text-xs font-bold uppercase">{THEMES[t].name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
+
+                             {/* Backgrounds */}
+                             <div className="space-y-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold opacity-80">
+                                    <Box className="w-5 h-5 text-purple-400" />
+                                    ENVIRONMENT LAYER
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {['grid', 'horizon', 'orbital', 'hex'].map((bg) => (
+                                        <button 
+                                            key={bg}
+                                            onClick={() => setBgStyle(bg as any)}
+                                            className={`p-4 rounded border text-center uppercase text-sm font-bold transition-all ${bgStyle === bg ? `${currentTheme.border} ${currentTheme.bg} ${currentTheme.text}` : 'border-white/10 hover:bg-white/5'}`}
+                                        >
+                                            {bg}
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
                         </div>
-                    </div>
-                    <button onClick={handleApply} className={`w-full py-3 rounded-lg font-bold font-mono tracking-wider transition-all flex items-center justify-center gap-2 mt-6 ${t.bg} ${t.text} border ${t.border} hover:opacity-90 active:scale-95`}>
-                        <Check className="w-5 h-5" /> CLOSE & APPLY
+                    )}
+                </div>
+
+                <div className="p-4 border-t border-white/10 flex justify-end">
+                    <button 
+                        onClick={() => { onApplyConfig(); setIsSettingsOpen(false); }}
+                        className={`px-8 py-3 rounded font-bold tracking-widest text-black hover:scale-105 transition-transform ${currentTheme.text.replace('text-', 'bg-')}`}
+                    >
+                        APPLY CONFIG
                     </button>
                 </div>
             </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
